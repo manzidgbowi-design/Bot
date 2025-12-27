@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Chatbot IA vocal</title>
+  <style>
+    body { font-family: Arial; background: #f2f2f2; }
+    #chat { width: 100%; max-width: 500px; margin: auto; }
+    #messages { height: 300px; overflow-y: auto; background: white; padding: 10px; border: 1px solid #ccc; margin-bottom: 10px; }
+    input { width: 70%; padding: 8px; }
+    button { padding: 8px; }
+  </style>
+</head>
+<body>
+
+<div id="chat">
+  <h3>Chatbot IA 🌐🎤</h3>
+  <div id="messages"></div>
+  <input id="userInput" placeholder="Écris un message..." />
+  <button onclick="send()">Envoyer</button>
+  <button onclick="listen()">🎙️ Parler</button>
+</div>
+
+<script src="bot.js"></script>
+</body>
+</html>const messages = document.getElementById("messages");
+
+// Envoyer texte écrit
+async function send() {
+  const input = document.getElementById("userInput");
+  const text = input.value;
+  if (!text) return;
+
+  addMessage("Toi", text);
+  input.value = "";
+
+  addMessage("IA", "…réfléchit…");
+  const response = await getResponse(text);
+  messages.lastChild.innerHTML = `<b>IA :</b> ${response}`;
+  speak(response);
+}
+
+// Ajouter message au chat
+function addMessage(sender, text) {
+  messages.innerHTML += `<p><b>${sender} :</b> ${text}</p>`;
+  messages.scrollTop = messages.scrollHeight;
+}
+
+// Parler avec synthèse vocale
+function speak(text) {
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "fr-FR";
+  speechSynthesis.speak(utterance);
+}
+
+// Reconnaissance vocale
+function listen() {
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = "fr-FR";
+  recognition.start();
+
+  recognition.onresult = async (event) => {
+    const speech = event.results[0][0].transcript;
+    addMessage("Toi", speech);
+    
+    addMessage("IA", "…réfléchit…");
+    const response = await getResponse(speech);
+    messages.lastChild.innerHTML = `<b>IA :</b> ${response}`;
+    speak(response);
+  };
+}
+
+// Récupérer réponse depuis l’API OpenAI
+async function getResponse(userText) {
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer TA_CLE_API" // ⚠️ Remplace par ta clé API
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: userText }]
+      })
+    });
+
+    const data = await res.json();
+    return data.choices[0].message.content;
+  } catch (err) {
+    return "Erreur : impossible de se connecter à l'IA.";
+  }
+}
